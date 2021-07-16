@@ -1,3 +1,5 @@
+#This program will scrape Craiglist to get all currently listed cars and trucks in the US and their attributes such as odometer, price, year etc.
+
 from urllib.request import urlopen
 from urllib.error import HTTPError
 from urllib.error import URLError
@@ -9,14 +11,12 @@ import re
 
 pages = set()
 
-#Get the state links
-print('step0')
+#Get the US states links
 state_links = []
 try:    
     html = urlopen('https://redding.craigslist.org/')
 except HTTPError as e:
     print(e)
-        #return null, break, or do some other "Plan B"
 except URLError:
     print('The server could not be found!')
 try:
@@ -29,47 +29,43 @@ except AttributeError as e:
     print(e)
     print('doesnt have tag') 
     
-#state_links = state_links[32]
+#state_links = state_links[:32] --- de-comment this line if you want to reduce/select the number of US states from which you want to scrape trucks and cars for sale data
 
-print('step1')
 
-#get the county links    
-    
+#Get the US counties/cities links    
 county_list = []
 for a in range(0,len(state_links)):
     try:    
         html = urlopen(state_links[a]['href'])
     except HTTPError as e:
         print(e)
-            #return null, break, or do some other "Plan B"
     except URLError:
         print('The server could not be found!')
     try:
         bs_county = BeautifulSoup(html.read(),'html.parser').find_all('a',href = re.compile(r'https://((?!www)[a-z]+).craigslist.org$'))
         for link in bs_county:
             county_list.append(link.attrs)
-            print(link.attrs)
+            #print(link.attrs) --- de-comment this line if you want to reduce/select the number of US states from which you want to scrape trucks and cars for sale data
     except AttributeError as e:
         print(e)
         print('doesnt have tag')
       
 county_list = county_list[:50]
 
-print('step2')
         
 for b in range(0,len(county_list)):
     county_list[b]['href'] = f"{county_list[b]['href']}/d/cars-trucks/search/cta"
     
 
-print('step3')
-
-
+#Sets up the main dataframe used for the final excel file in which all car listings and their corresponding attributes will be stored
 ExcelFile = pd.DataFrame({'ID':['Null'],'link':['Null'],'odometer':[0],'paint color':['test'],
                               'VIN':['test'],'fuel':['test'],'type':['test'],
                               'drive':['test'],'title status':['test'],
                               'price':[0],'brand':['test'],'model':['Null'],
                               'transmission':['test'],'cylinders':['test'],
                               'year make':[0],'date posted':[datetime.today()]})
+
+#Lists of car brands and models to loop through so that each car listing can have 'brand' and 'model' attributes
 car_brands = ['jeep','subaru','bmw','mercedes','audi','ford','honda'
                               ,'toyota','acura','lexus','gmc','dodge','cadillac','chevy',
                               'chevrolet','porsche','tesla','chrysler','nissan','volkswagen',
@@ -113,98 +109,81 @@ car_models = [' a3',' a4',' a5',' a6',' a7',' a8',' q5',' q7','mdx','rdx','ilx',
               ,' 1500',' 2500',' 3500',' 500',' 370z', ' ct6']
 
 total_count = 0
-
 file_saving_count = 0
 
+#Loops through all US counties/cities
 for a in range(0,len(county_list)):
-    #if a < 2:
         print(f"starting a new loop, county being {county_list[a]['href']}")
         total_count_liste = []
         liste = []
             
-            #get the count of total cars in the selected area/city
+        #Gets the count of total cars of each US county/city
         try:    
             html = urlopen(county_list[a]['href'])
         except HTTPError as e:
             print(e)
-            #return null, break, or do some other "Plan B"
         except URLError:
             print('The server could not be found!')
         except ConnectionResetError as e:
             print(e)
         try:
             bs_test = BeautifulSoup(html.read(),'html.parser').find_all('span',{'class':'totalcount'})
-                #vision  = str(bs_test)
             for the_count in bs_test:
-                #print(a)
                 total_count_liste.append(re.sub('[^0-9]','',str(the_count)))
             total_count_liste = int(str(set(total_count_liste))[2:-2])
         except AttributeError as e:
             print(e) 
         
-            #retrieve car listing links
+        
+        #Retrieves the first 120 car listings links of each US county/city
         try:
             html = urlopen(county_list[a]['href'])
         except HTTPError as e:
             print(e)
-                            #return null, break, or do some other "Plan B"
         except URLError:
             print('The server could not be found!')
         try:
             bs = BeautifulSoup(html.read(),
                         'html.parser').find_all('a',
-                        href = re.compile(r'craigslist.org/((?![^a-z]).)((?![^a-z]).)((?![^a-z]).)/'))#.find({'class':'result-title'})
+                        href = re.compile(r'craigslist.org/((?![^a-z]).)((?![^a-z]).)((?![^a-z]).)/'))
             for link in bs:
                 if 'href' in str(link) and 'data-ids' not in str(link):
                     if 'data-id' in str(link):
                         liste.append(link.attrs)
-                        #print(len(liste))
-                        #print(str(link.attrs))
-                    #print(bs)
-                    #return bs.find('div',{'id':'bodyContent'}).find_all('a', href = re.compile(r'^(/wiki/)((?!:).)*$'))
         except AttributeError:
             print('doesnt have tag') 
             
             
             
             
-        
-        #links_count = 120------------------------
-        #if total_count_liste < 360:
+        #Retrieves all car listings links of each US county/city
         while total_count_liste >= (len(liste)+120): 
-        #while 300 > (len(liste)+120):
-        #while total_count_liste > len(liste):
             url = f"{county_list[a]['href']}?s={len(liste)}"
-            #print(url)
             try:
                 html = urlopen(url)
             except HTTPError as e:
                 print(e)
-                    #return null, break, or do some other "Plan B"
             except URLError:
                 print('The server could not be found!')
             try:
                 bs = BeautifulSoup(html.read(),
                     'html.parser').find_all('a',
-                    href = re.compile(r'craigslist.org/((?![^a-z]).)((?![^a-z]).)((?![^a-z]).)/'))#.find({'class':'result-title'})
+                    href = re.compile(r'craigslist.org/((?![^a-z]).)((?![^a-z]).)((?![^a-z]).)/'))
                 for link in bs:
                     if 'href' in str(link) and 'data-ids' not in str(link):
                         if 'data-id' in str(link):
                             liste.append(link.attrs)
-                print(len(liste))
-                #links_count = links_count +120----------------
-                #print(links_count)-------------------
             except AttributeError:
                 print('doesnt have tag')
             
             
             
 
-        #liste = liste[:10]
+        #liste = liste[:10] --- de-comment this line if you want to limit the number of vehicles that will be scraped per US county/city (there should be around 400+ counties/city)
         
 
 
-        
+        #Loops through all car listings
         for b in range(0,len(liste)):
             model_validated = 0
             dictio = {'ID':'Null','link':'Null','odometer':0,'paint color':'Null',
@@ -212,13 +191,13 @@ for a in range(0,len(county_list)):
                               'drive':'Null','title status':'Null',
                               'price':0,'brand':'Null','model':'Null'
                               ,'transmission':'Null','cylinders':'Null',
-                              'year make':0,'date posted':datetime.today()}#,'date posted':datetime.today().strftime("%Y")}
+                              'year make':0,'date posted':datetime.today()}
 
             la_bonne_listasse = []
             module_b = []
             module_time = []
                 
-                #retrieve car listing links
+            #Retrieves the attributes for each car listing
             try:
                 html = urlopen(liste[b]['href'])
             except HTTPError as e:
@@ -230,12 +209,12 @@ for a in range(0,len(county_list)):
             except AttributeError as e:
                 print(e) 
             
+            #Inserts each attribute, if found, into the dictionary that is going to be appended to the main dataframe 
             try:
                 dictio['ID'] = liste[b]['data-id']
             except KeyError as e:
                 print(e)
             dictio['link'] = liste[b]['href']
-            
             data = bs_2.find_all('span')
             data2 = bs_2.find_all('b')
             data3 = bs_2.find_all('time',{'class':'date timeago'})
@@ -250,9 +229,7 @@ for a in range(0,len(county_list)):
                         model_validated = 1
                 for ligne in data3:
                     module_time.append(str(ligne))
-                dictio["date posted"] = datetime.strptime(module_time[1][63:79], '%Y-%m-%d %H:%M')# + timedelta(hours=9)
-            #dictio["hours since post"] = datetime.today() - date_posted
-                #if 'titletextonly' in str(ligne):
+                dictio["date posted"] = datetime.strptime(module_time[1][63:79], '%Y-%m-%d %H:%M')
                 year_make = module_b[0]
                 year_make = re.sub('[^0-9]',' ',year_make)
                 year_make = re.sub('(([^0-9].)([^0-9].)([^0-9].)([^0-9].))','',year_make)
@@ -262,12 +239,9 @@ for a in range(0,len(county_list)):
             if len(year_make) > 0:
                 if len(year_make) > 4:
                     year_make = year_make[:4]
-                #if len(year_make) = 4:
                 year_make = int(year_make)
                 if year_make <= (int(datetime.today().strftime("%Y"))+1):
                     dictio["year make"] = year_make
-            
-            
             for i in range(0,len(la_bonne_listasse)):
                 la_bonne_listasse[i] = re.sub('<b','',la_bonne_listasse[i])
                 la_bonne_listasse[i] = re.sub('b>','',la_bonne_listasse[i])
@@ -286,20 +260,16 @@ for a in range(0,len(county_list)):
                 la_bonne_listasse[i] = re.sub('span','',la_bonne_listasse[i])
                 la_bonne_listasse[i] = re.sub('class','',la_bonne_listasse[i])[2:]
                 if 'odometer' in la_bonne_listasse[i]:
-                        #print(la_bonne_listasse[i])
                     odometer = re.sub('odometer','',la_bonne_listasse[i])
                     odometer = re.sub('[^0-9]',' ',la_bonne_listasse[i])
                     odometer = re.sub(' ','',odometer)
                     if len(odometer) > 0:
                         odometer = int(odometer)
-                            #print(odometer)
                         dictio["odometer"] = odometer
-                            #print(dictio["odometer"])
                 if 'paint color' in la_bonne_listasse[i]:
                     paint_color = re.sub('paint color','',la_bonne_listasse[i])
                     paint_color = re.sub(' ','',paint_color)
                     dictio["paint color"] = paint_color
-                    #print(dictio["paint color"])
                 if 'VIN' in la_bonne_listasse[i]:
                     Vehicle_Identification_Number = re.sub('VIN','',la_bonne_listasse[i])
                     Vehicle_Identification_Number = re.sub(' ','',Vehicle_Identification_Number)
@@ -334,12 +304,13 @@ for a in range(0,len(county_list)):
                     cylinders = re.sub(' ','',cylinders)
                     if len(cylinders) > 0:
                         cylinders = int(cylinders)
-                            #print(odometer)
                         dictio["cylinders"] = cylinders
             total_count = total_count +1
             file_saving_count = file_saving_count + 1
-            print(f'{b}/{len(liste)}, total scraped: {total_count}')
+            print(f'{b}/{len(liste)}, total scraped: {total_count}') #---- you can comment out this line if you find getting this data printed on your while the scraper is running annoying
             ExcelFile = ExcelFile.append(dictio,ignore_index=True,sort=False)
+            
+            #saving the excel file every batch of 100 scraped cars, in case if the connection crashes you still has the data saved (you can change the directory location as you please)
             if file_saving_count == 100:
                 writer = ExcelWriter(r'C:\Users\dimit\Downloads\current_tickets.xlsx')
                 ExcelFile.to_excel(writer,'cars', index = False)
