@@ -312,7 +312,7 @@ for a in range(0,len(county_list)):
             
             #saving the excel file every batch of 100 scraped cars, in case if the connection crashes you still has the data saved (you can change the directory location as you please)
             if file_saving_count == 100:
-                writer = ExcelWriter(r'C:\Users\dimit\Downloads\current_tickets.xlsx')
+                writer = ExcelWriter(r'C:\Users\dimit\Downloads\Cars.xlsx')
                 ExcelFile.to_excel(writer,'cars', index = False)
                 writer.save()
                 writer.close()
