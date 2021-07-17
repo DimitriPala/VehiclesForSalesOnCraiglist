@@ -236,8 +236,8 @@ for a in range(0,len(county_list)):
                 year_make = re.sub(' ','',year_make)
             except IndexError as e:
                 print(e)
-            if len(year_make) > 0:
-                if len(year_make) > 4:
+            if len(str(year_make)) > 0:
+                if len(str(year_make)) > 4:
                     year_make = year_make[:4]
                 year_make = int(year_make)
                 if year_make <= (int(datetime.today().strftime("%Y"))+1):
